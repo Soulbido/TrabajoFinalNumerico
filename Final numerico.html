@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sustentación: Métodos Numéricos</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <style>
+        :root {
+            --primary-bg: #0f172a;
+            --sidebar-bg: #1e293b;
+            --text-main: #f8fafc;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --border-color: #334155;
+            --card-bg: #1e293b;
+            --error-color: #ef4444;
+            --success-color: #10b981;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- Panel Lateral (Sidebar) --- */
+        .sidebar {
+            width: 320px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 25px;
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .sidebar-header h2 {
+            margin: 0;
+            font-size: 1.3rem;
+            color: var(--accent);
+        }
+
+        .sidebar-header p {
+            margin: 5px 0 0;
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        .category-title {
+            padding: 15px 25px 5px;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: #94a3b8;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .method-btn {
+            display: block;
+            width: 100%;
+            background: none;
+            border: none;
+            color: #cbd5e1;
+            padding: 12px 25px;
+            text-align: left;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.95rem;
+            border-left: 4px solid transparent;
+        }
+
+        .method-btn:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: var(--text-main);
+        }
+
+        .method-btn.active {
+            background-color: #334155;
+            color: var(--accent);
+            border-left: 4px solid var(--accent);
+            font-weight: 600;
+        }
+
+        /* --- Contenedor Principal --- */
+        .main-content {
+            flex-grow: 1;
+            padding: 40px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .header {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2rem;
+        }
+
+        .header p {
+            margin: 10px 0 0;
+            color: #94a3b8;
+            max-width: 800px;
+        }
+
+        /* --- Tarjetas (Cards) --- */
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .card-title {
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 1.25rem;
+            color: #e2e8f0;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        /* --- Formularios Dinámicos --- */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-group label {
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+
+        .input-group label span {
+            font-family: monospace;
+            color: #94a3b8;
+            margin-left: 5px;
+        }
+
+        input, select, textarea {
+            background-color: var(--primary-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+        
+        textarea {
+            resize: vertical;
+            font-family: monospace;
+            min-height: 100px;
+        }
+
+        button.run-btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 40px;
+            font-size: 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button.run-btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        /* --- Resultados --- */
+        #error-msg {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--error-color);
+            color: var(--error-color);
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        #success-final {
+            color: var(--success-color);
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        /* Tablas de iteraciones */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            min-width: 600px;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: #0f172a;
+            color: var(--accent);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover td {
+            background-color: rgba(51, 65, 85, 0.3);
+        }
+
+        #plot-container {
+            width: 100%;
+            height: 500px;
+            margin-top: 30px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        
+        /* Ocultar elementos plot_ly modebar */
+        .js-plotly-plot .plotly .modebar {
+            left: 10px;
+            right: auto;
+        }
+
+        /* Estilo específico para inputs de matriz */
+        .matrix-input-area {
+            font-family: monospace;
+            letter-spacing: 1px;
+            line-height: 1.5;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>Métodos Numéricos</h2>
+            <p>Sustentación Final</p>
+        </div>
+        
+        <div class="category-title">Ecuaciones No Lineales</div>
+        <button class="method-btn active" onclick="selectMethod('biseccion')">Bisección</button>
+        <button class="method-btn" onclick="selectMethod('regla_falsa')">Regla Falsa</button>
+        <button class="method-btn" onclick="selectMethod('punto_fijo')">Punto Fijo</button>
+        <button class="method-btn" onclick="selectMethod('newton')">Newton-Raphson</button>
+        <button class="method-btn" onclick="selectMethod('secante')">Secante</button>
+        <button class="method-btn" onclick="selectMethod('raices_multiples')">Raíces Múltiples</button>
+
+        <div class="category-title">Sistemas de Ecuaciones</div>
+        <button class="method-btn" onclick="selectMethod('gauss_simple')">Eliminación Gaussiana</button>
+        <button class="method-btn" onclick="selectMethod('lu')">Factorización LU</button>
+        <button class="method-btn" onclick="selectMethod('jacobi')">Jacobi</button>
+        <button class="method-btn" onclick="selectMethod('gauss_seidel')">Gauss-Seidel</button>
+        <button class="method-btn" onclick="selectMethod('sor')">SOR (Relajación)</button>
+
+        <div class="category-title">Interpolación</div>
+        <button class="method-btn" onclick="selectMethod('newton_diff')">Diferencias Divididas</button>
+        <button class="method-btn" onclick="selectMethod('lagrange')">Lagrange</button>
+        <button class="method-btn" onclick="selectMethod('splines')">Trazadores (Splines)</button>
+
+        <div class="category-title">Diferenciación / Integración</div>
+        <button class="method-btn" onclick="selectMethod('diferencias_finitas')">Diferencias Finitas</button>
+        <button class="method-btn" onclick="selectMethod('trapecio')">Regla del Trapecio</button>
+        <button class="method-btn" onclick="selectMethod('simpson')">Regla de Simpson</button>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1 id="method-title">Bisección</h1>
+            <p id="method-desc">Cargando descripción...</p>
+        </div>
+
+        <div class="card">
+            <h3 class="card-title">Parámetros de Entrada</h3>
+            <div class="form-grid" id="input-fields">
+                </div>
+            
+            <div id="error-config-section" style="display: none; border-top: 1px solid var(--border-color); padding-top: 20px; margin-top: 20px;">
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label>Tolerancia <span>(ej: 1e-6)</span></label>
+                        <input type="text" id="tol" value="1e-6">
+                    </div>
+                    <div class="input-group">
+                        <label>Tipo de Error <span>(Teoría de Errores)</span></label>
+                        <select id="error-type">
+                            <option value="absoluto">Error Absoluto (|Xn - Xn-1|)</option>
+                            <option value="relativo">Error Relativo (|Xn - Xn-1| / |Xn|)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Iteraciones Máximas</label>
+                        <input type="number" id="niter" value="100" min="1">
+                    </div>
+                </div>
+            </div>
+
+            <button class="run-btn" onclick="runAlgorithm()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                Ejecutar Método
+            </button>
+            
+            <div id="error-msg"></div>
+        </div>
+
+        <div class="card" id="results-card" style="display: none;">
+            <h3 class="card-title">Resultados y Visualización</h3>
+            
+            <div id="success-final"></div>
+
+            <div class="table-container">
+                <table id="results-table">
+                    <thead>
+                        <tr id="table-head"></tr>
+                    </thead>
+                    <tbody id="table-body"></tbody>
+                </table>
+            </div>
+            
+            <div id="plot-container"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURACIÓN MAESTRA DE MÉTODOS ---
+        // Contiene inputs específicos, descripciones y tipos de visualización
+        const methodConfigs = {
+            // --- NO LINEALES ---
+            biseccion: {
+                title: "Método de Bisección",
+                desc: "Método cerrado que requiere un intervalo [a, b] donde f(a)*f(b) < 0. Busea la raíz dividiendo el intervalo a la mitad.",
+                type: 'iterative_root',
+                inputs: [
+                    { id: 'func', label: 'Función f(x)', type: 'text', value: 'x^3 - x - 2' },
+                    { id: 'xl', label: 'Límite Inferior (a)', type: 'number', value: '1' },
+                    { id: 'xu', label: 'Límite Superior (b)', type: 'number', value: '2' }
+                ]
+            },
+            regla_falsa: {
+                title: "Método de Regla Falsa",
+                desc: "Método cerrado similar a bisección, pero utiliza una interpolación lineal entre f(a) y f(b) para encontrar el siguiente punto.",
+                type: 'iterative_root',
+                inputs: [
+                    { id: 'func', label: 'Función f(x)', type: 'text', value: 'x^2 - 5*x + 6*sin(x)' },
+                    { id: 'xl', label: 'Límite Inferior (a)', type: 'number', value: '0' },
+                    { id: 'xu', label: 'Límite Superior (b)', type: 'number', value: '1' }
+                ]
+            },
+            punto_fijo: {
+                title: "Iteración de Punto Fijo",
+                desc: "Método abierto que transforma f(x)=0 en x=g(x). Requiere un valor inicial x0 y que |g'(x)| < 1 en el entorno.",
+                type: 'iterative_root',
+                inputs: [
+                    { id: 'func', label: 'Función g(x) <span>(despejada)</span>', type: 'text', value: 'cos(x)' },
+                    { id: 'x0', label: 'Valor Inicial (x0)', type: 'number', value: '0.5' }
+                ]
+            },
+            newton: {
+                title: "Método de Newton-Raphson",
+                desc: "Método abierto muy rápido. Requiere valor inicial x0 y la derivada analítica f'(x).",
+                type: 'iterative_root',
+                inputs: [
+                    { id: 'func', label: 'Función f(x)', type: 'text', value: 'x^3 - x - 1' },
+                    { id: 'dfunc', label: 'Derivada f\'(x)', type: 'text', value: '3*x^2 - 1' },
+                    { id: 'x0', label: 'Valor Inicial (x0)', type: 'number', value: '1.5' }
+                ]
+            },
+            secante: {
+                title: "Método de la Secante",
+                desc: "Variante de Newton que aproxima la derivada usando dos puntos iniciales x0 y x1.",
+                type: 'iterative_root',
+                inputs: [
+                    { id: 'func', label: 'Función f(x)', type: 'text', value: 'sin(x-4)*exp(x-4) + 0.322396' },
+                    { id: 'x0', label: 'Aproximación inicial x0', type: 'number', value: '0' },
+                    { id: 'x1', label: 'Aproximación inicial x1', type: 'number', value: '1' }
+                ]
+            },
+            raices_multiples: {
+                title: "Método de Raíces Múltiples <span>(Newton Modificado)</span>",
+                desc: "Variante de Newton diseñada para converger rápidamente cuando f'(raiz)=0. Requiere f(x), f'(x) y f''(x).",
+                type: 'iterative_root',
+                inputs: [
+                    { id: 'func', label: 'Función f(x)', type: 'text', value: 'x^4 - 8*x^3 + 22*x^2 - 24*x + 9' },
+                    { id: 'dfunc', label: 'Derivada f\'(x)', type: 'text', value: '4*x^3 - 24*x^2 + 44*x - 24' },
+                    { id: 'ddfunc', label: '2da Derivada f\'\'(x)', type: 'text', value: '12*x^2 - 48*x + 44' },
+                    { id: 'x0', label: 'Valor Inicial (x0)', type: 'number', value: '1.1' }
+                ]
+            },
+            
+            // --- SISTEMAS LINEALES ---
+            gauss_simple: {
+                title: "Eliminación Gaussiana Simple",
+                desc: "Método directo para resolver Ax=b mediante triangulación superior y sustitución hacia atrás.",
+                type: 'direct_sys',
+                inputs: [
+                    { id: 'matrixA', label: 'Matriz A <span>(filas separadas por ; , columnas por , )</span>', type: 'textarea', value: '2,1,-1;\n-3,-1,2;\n-2,1,2', class:'matrix-input-area' },
+                    { id: 'vectorB', label: 'Vector b <span>(separado por , )</span>', type: 'text', value: '8,-11,-3' }
+                ]
+            },
+            lu: {
+                title: "Factorización LU <span>(Doolittle)</span>",
+                desc: "Descompone A=LU (L con 1s en la diagonal) para resolver sistemas Ax=b eficientemente para múltiples b.",
+                type: 'direct_sys',
+                inputs: [
+                    { id: 'matrixA', label: 'Matriz A', type: 'textarea', value: '4,3;\n6,3', class:'matrix-input-area' },
+                    { id: 'vectorB', label: 'Vector b <span>(Opcional para resolver)</span>', type: 'text', value: '13,18' }
+                ]
+            },
+            jacobi: {
+                title: "Método Iterativo de Jacobi",
+                desc: "Método iterativo que requiere que A sea diagonalmente dominante para garantizar convergencia.",
+                type: 'iterative_sys',
+                inputs: [
+                    { id: 'matrixA', label: 'Matriz A', type: 'textarea', value: '10,-1,2;\n-1,11,-1;\n2,-1,10', class:'matrix-input-area' },
+                    { id: 'vectorB', label: 'Vector b', type: 'text', value: '6,25,-11' },
+                    { id: 'vectorX0', label: 'Vector inicial x0 <span>(ej: 0,0,0)</span>', type: 'text', value: '0,0,0' }
+                ]
+            },
+            gauss_seidel: {
+                title: "Método de Gauss-Seidel",
+                desc: "Método iterativo más rápido que Jacobi, utiliza los valores calculados inmediatamente.",
+                type: 'iterative_sys',
+                inputs: [
+                    { id: 'matrixA', label: 'Matriz A', type: 'textarea', value: '10,-1,2;\n-1,11,-1;\n2,-1,10', class:'matrix-input-area' },
+                    { id: 'vectorB', label: 'Vector b', type: 'text', value: '6,25,-11' },
+                    { id: 'vectorX0', label: 'Vector inicial x0', type: 'text', value: '0,0,0' }
+                ]
+            },
+            sor: {
+                title: "Método SOR <span>(Relajación)</span>",
+                desc: "Acelera Gauss-Seidel mediante un factor de relajación ω (generalmente entre 1 y 2).",
+                type: 'iterative_sys',
+                inputs: [
+                    { id: 'matrixA', label: 'Matriz A', type: 'textarea', value: '4,3;\n6,3', class:'matrix-input-area' },
+                    { id: 'vectorB', label: 'Vector b', type: 'text', value: '13,18' },
+                    { id: 'vectorX0', label: 'Vector inicial x0', type: 'text', value: '0,0' },
+                    { id: 'omega', label: 'Factor ω <span>(1 < ω < 2)</span>', type: 'number', value: '1.1', step: '0.1' }
+                ]
+            },
+
+            // --- INTERPOLACIÓN ---
+            newton_diff: {
+                title: "Diferencias Divididas de Newton",
+                desc: "Construye el polinomio interpolante ajustando diferencias entre puntos. Tarea: Programar el cálculo de la tabla.",
+                type: 'interpolation',
+                inputs: [
+                    { id: 'pointsX', label: 'Puntos X <span>(separados por , )</span>', type: 'text', value: '1, 2, 4, 5' },
+                    { id: 'pointsY', label: 'Puntos Y (f(x))', type: 'text', value: '1, 4, 16, 25' }
+                ]
+            },
+            lagrange: {
+                title: "Polinomio de Lagrange",
+                desc: "Método directo para encontrar el polinomio que pasa exactamente por un set de puntos.",
+                type: 'interpolation',
+                inputs: [
+                    { id: 'pointsX', label: 'Puntos X', type: 'text', value: '1, 2, 3' },
+                    { id: 'pointsY', label: 'Puntos Y', type: 'text', value: '1, 8, 27' }
+                ]
+            },
+            splines: {
+                title: "Trazadores Cúbicos <span>(Splines)</span>",
+                desc: "Ajusta polinomios de grado 3 entre cada par de puntos, garantizando suavidad (continuidad en f' y f'').",
+                type: 'interpolation',
+                inputs: [
+                    { id: 'pointsX', label: 'Puntos X', type: 'text', value: '1, 2, 3, 4' },
+                    { id: 'pointsY', label: 'Puntos Y', type: 'text', value: '1, 5, 2, 10' }
+                ]
+            },
+
+            // --- INT / DIF ---
+            diferencias_finitas: {
+                title: "Diferencias Finitas (Derivación)",
+                desc: "Aproxima f'(x) o f''(x) usando puntos vecinos. Incluye esquemas hacia adelante, atrás y centrados (Tarea).",
+                type: 'calc_single',
+                inputs: [
+                    { id: 'func', label: 'Función f(x)', type: 'text', value: 'exp(x)' },
+                    { id: 'x_calc', label: 'Punto x a evaluar', type: 'number', value: '1' },
+                    { id: 'h_step', label: 'Paso h', type: 'number', value: '0.1' },
+                    { id: 'scheme', label: 'Esquema y Orden', type: 'select', options: [
+                        {val: 'fwd1', text: 'Adelante O(h)'},
+                        {val: 'bwd1', text: 'Atrás O(h)'},
+                        {val: 'ctr2', text: 'Centrada O(h^2) [Tarea]'}
+                    ]}
+                ]
+            },
+            trapecio: {
+                title: "Regla del Trapecio",
+                desc: "Aproxima la integral como el área de trapecios bajo la curva. Tarea: Implementar Trapecio Compuesto.",
+                type: 'calc_single',
+                inputs: [
+                    { id: 'func', label: 'Función f(x)', type: 'text', value: 'x^2' },
+                    { id: 'int_a', label: 'Límite Inferior (a)', type: 'number', value: '0' },
+                    { id: 'int_b', label: 'Límite Superior (b)', type: 'number', value: '2' },
+                    { id: 'n_seg', label: 'Número de segmentos (n>=1)', type: 'number', value: '1' }
+                ]
+            },
+            simpson: {
+                title: "Regla de Simpson (1/3 y 3/8 Compuesto)",
+                desc: "Aproxima la integral usando parábolas (1/3) o cúbicas (3/8). Requiere n segmentos específicos.",
+                type: 'calc_single',
+                inputs: [
+                    { id: 'func', label: 'Función f(x)', type: 'text', value: 'sin(x)' },
+                    { id: 'int_a', label: 'Límite a', type: 'number', value: '0' },
+                    { id: 'int_b', label: 'Límite b', type: 'number', value: '3.14159' },
+                    { id: 'n_seg', label: 'Segmentos n', type: 'number', value: '2' },
+                    { id: 'simp_type', label: 'Tipo', type: 'select', options: [
+                        {val: '13', text: 'Simpson 1/3 (n par)'},
+                        {val: '38', text: 'Simpson 3/8 (n múltiplo de 3) [Tarea]'}
+                    ]}
+                ]
+            }
+        };
+
+        let currentMethod = 'biseccion';
+
+        // --- GESTIÓN DE LA UI ---
+        function selectMethod(methodId) {
+            currentMethod = methodId;
+            
+            // Actualizar botones del menú
+            document.querySelectorAll('.method-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const config = methodConfigs[methodId];
+            if (!config) return;
+
+            // Actualizar Título y Descripción
+            document.getElementById('method-title').innerHTML = config.title;
+            document.getElementById('method-desc').innerText = config.desc;
+            
+            // Renderizar Inputs Dinámicos
+            let htmlInputs = '';
+            config.inputs.forEach(inp => {
+                if (inp.type === 'textarea') {
+                    htmlInputs += `
+                        <div class="input-group">
+                            <label>${inp.label}</label>
+                            <textarea id="${inp.id}" class="${inp.class || ''}">${inp.value}</textarea>
+                        </div>
+                    `;
+                } else if (inp.type === 'select') {
+                     htmlInputs += `<div class="input-group"><label>${inp.label}</label><select id="${inp.id}">`;
+                     inp.options.forEach(opt => {
+                         htmlInputs += `<option value="${opt.val}">${opt.text}</option>`;
+                     });
+                     htmlInputs += `</select></div>`;
+                } else {
+                    htmlInputs += `
+                        <div class="input-group">
+                            <label>${inp.label}</label>
+                            <input type="${inp.type}" id="${inp.id}" value="${inp.value}" ${inp.step ? `step="${inp.step}"` : ''}>
+                        </div>
+                    `;
+                }
+            });
+            document.getElementById('input-fields').innerHTML = htmlInputs;
+            
+            // Mostrar u ocultar panel de Error/Niter (solo para iterativos)
+            const errorSection = document.getElementById('error-config-section');
+            if (config.type === 'iterative_root' || config.type === 'iterative_sys') {
+                errorSection.style.display = 'block';
+            } else {
+                errorSection.style.display = 'none';
+            }
+
+            // Limpiar resultados anteriores
+            document.getElementById('results-card').style.display = 'none';
+            hideError();
+        }
+
+        // --- UTILIDADES ---
+        function showError(msg) {
+            const errDiv = document.getElementById('error-msg');
+            errDiv.innerText = `⚠️ Error: ${msg}`;
+            errDiv.style.display = 'block';
+            document.getElementById('results-card').style.display = 'none';
+        }
+
+        function hideError() {
+            document.getElementById('error-msg').style.display = 'none';
+        }
+
+        // Motor de evaluación con Math.js (seguro y potente)
+        function evaluateFunc(expression, x_val) {
+            try {
+                return math.evaluate(expression, { x: x_val, e: math.e, pi: math.pi });
+            } catch (e) {
+                throw new Error(`Error evaluando la función '${expression}'. Revisa la sintaxis.`);
+            }
+        }
+        
+        function parseInputArray(id) {
+            return document.getElementById(id).value.split(',').map(Number);
+        }
+        
+        function parseInputMatrix(id) {
+            const text = document.getElementById(id).value;
+            return text.split(';').map(row => row.split(',').map(Number));
+        }
+
+        // CÁLCULO DE ERRORES (Basado en Diapositiva "Teoría de Errores")
+        function calcularError(xActual, xAnterior, tipo) {
+            if (xAnterior === null || xAnterior === undefined) return null;
+            
+            const errAbs = Math.abs(xActual - xAnterior);
+            if (tipo === 'absoluto') {
+                return errAbs;
+            } else if (tipo === 'relativo') {
+                if (Math.abs(xActual) < 1e-12) return errAbs; // Evitar división por cero
+                return errAbs / Math.abs(xActual);
+            }
+            return errAbs;
+        }
+
+        // RENDERIZADO DE TABLA
+        function renderTable(headers, rows) {
+            const headTr = document.getElementById('table-head');
+            const body = document.getElementById('table-body');
+            
+            headTr.innerHTML = headers.map(h => `<th>${h}</th>`).join('');
+            body.innerHTML = rows.map(row => `
+                <tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>
+            `).join('');
+        }
+
+        // --- ORQUESTADOR PRINCIPAL ---
+        function runAlgorithm() {
+            hideError();
+            const config = methodConfigs[currentMethod];
+            if (!config) return;
+            
+            document.getElementById('results-card').style.display = 'block';
+            document.getElementById('success-final').innerText = '';
+            document.getElementById('plot-container').innerHTML = ''; // Limpiar gráfica
+
+            try {
+                // Ejecutar lógica según el tipo de método
+                switch (config.type) {
+                    case 'iterative_root':
+                        solveIterativeRoot();
+                        break;
+                    case 'direct_sys':
+                        solveDirectSystem();
+                        break;
+                    case 'iterative_sys':
+                        solveIterativeSystem();
+                        break;
+                    case 'interpolation':
+                        solveInterpolation();
+                        break;
+                    case 'calc_single':
+                        solveSingleCalc();
+                        break;
+                }
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        // =========================================================================
+        // --- IMPLEMENTACIÓN DE ALGORITMOS ---
+        // =========================================================================
+
+        // 1. RAÍCES (NO LINEALES)
+        function solveIterativeRoot() {
+            const tol = Number(document.getElementById('tol').value);
+            const maxIter = Number(document.getElementById('niter').value);
+            const errorType = document.getElementById('error-type').value;
+            
+            let headers = ['Iter (n)'];
+            let rows = [];
+            let x_final = null;
+            let converged = false;
+
+            // Historial para gráficas
+            let histX = [];
+            let histF = [];
+
+            if (currentMethod === 'biseccion' || currentMethod === 'regla_falsa') {
+                const f = document.getElementById('func').value;
+                let a = Number(document.getElementById('xl').value);
+                let b = Number(document.getElementById('xu').value);
+                
+                let fa = evaluateFunc(f, a);
+                let fb = evaluateFunc(f, b);
+                
+                if (fa * fb >= 0) throw new Error("f(a)*f(b) >= 0. El intervalo no garantiza una raíz.");
+                
+                headers.push('a', 'b', 'xn (Raíz)', 'f(xn)', 'Error');
+                
+                let xn, xn_ant = null, iter = 0;
+                
+                while (iter < maxIter) {
+                    // Diferencia núcleo entre Bisección y Regla Falsa
+                    if (currentMethod === 'biseccion') {
+                        xn = (a + b) / 2;
+                    } else {
+                        // Formula Regla Falsa: xn = b - f(b)*(a-b)/(f(a)-f(b))
+                        xn = b - (fb * (a - b)) / (fa - fb);
+                    }
+                    
+                    let fxn = evaluateFunc(f, xn);
+                    let err = calcularError(xn, xn_ant, errorType);
+                    
+                    rows.push([
+                        iter, 
+                        a.toFixed(6), 
+                        b.toFixed(6), 
+                        xn.toFixed(8), 
+                        fxn.toExponential(4), 
+                        err !== null ? err.toExponential(4) : '---'
+                    ]);
+                    
+                    histX.push(xn); histF.push(fxn);
+
+                    // Criterio parada
+                    if (fxn === 0 || (err !== null && err < tol)) {
+                        converged = true; x_final = xn; break;
+                    }
+
+                    // Actualizar intervalo
+                    if (fa * fxn < 0) {
+                        b = xn; fb = fxn;
+                    } else {
+                        a = xn; fa = fxn;
+                    }
+                    xn_ant = xn;
+                    iter++;
+                }
+                x_final = xn;
+                plotRootMethod(f, a-1, b+1, x_final, histX);
+
+            } else if (currentMethod === 'punto_fijo') {
+                const g = document.getElementById('func').value;
+                let x0 = Number(document.getElementById('x0').value);
+                
+                headers.push('xn', 'g(xn) [xn+1]', 'Error');
+                let iter = 0, x_ant = null;
+                
+                while(iter < maxIter) {
+                    let x_next = evaluateFunc(g, x0);
+                    let err = calcularError(x_next, x0, errorType);
+                    
+                    rows.push([iter, x0.toFixed(8), x_next.toFixed(8), err !== null ? err.toExponential(4) : '---']);
+                    
+                    histX.push(x0);
+                    
+                    if (err !== null && err < tol) { converged = true; break; }
+                    
+                    x0 = x_next;
+                    iter++;
+                }
+                x_final = x0;
+                // Gráfica Punto Fijo (cobweb plot requeriría f(x), graficamos g(x) vs x)
+                plotGenericFunction(g, x_final - 2, x_final + 2, 'g(x)');
+
+            } else if (currentMethod === 'newton') {
+                const f = document.getElementById('func').value;
+                const df = document.getElementById('dfunc').value;
+                let x0 = Number(document.getElementById('x0').value);
+                
+                headers.push('xn', 'f(xn)', 'f\'(xn)', 'Error');
+                let iter = 0, x_ant = null;
+
+                while (iter < maxIter) {
+                    let fx = evaluateFunc(f, x0);
+                    let dfx = evaluateFunc(df, x0);
+                    
+                    if (Math.abs(dfx) < 1e-12) throw new Error("Derivada cercana a cero. Newton falla.");
+                    
+                    histX.push(x0); histF.push(fx);
+
+                    let x_next = x0 - (fx / dfx);
+                    let err = calcularError(x_next, x0, errorType);
+                    
+                    rows.push([iter, x0.toFixed(8), fx.toExponential(3), dfx.toFixed(5), err !== null ? err.toExponential(4) : '---']);
+                    
+                    if (err !== null && err < tol) { converged = true; x_final = x_next; break; }
+                    
+                    x0 = x_next;
+                    iter++;
+                }
+                x_final = x0;
+                plotRootMethod(f, x_final-2, x_final+2, x_final, histX);
+
+            } else if (currentMethod === 'secante') {
+                // Basado en Código 2 proporcionado
+                const f = document.getElementById('func').value;
+                let x0 = Number(document.getElementById('x0').value);
+                let x1 = Number(document.getElementById('x1').value);
+                
+                headers.push('xn', 'f(xn)', 'Error');
+                
+                let f0 = evaluateFunc(f, x0);
+                let f1 = evaluateFunc(f, x1);
+                
+                rows.push([0, x0.toFixed(8), f0.toExponential(3), '---']);
+                rows.push([1, x1.toFixed(8), f1.toExponential(3), '---']);
+                histX.push(x0, x1);
+
+                let iter = 2, converged = false;
+                
+                while(iter < maxIter) {
+                    if (Math.abs(f1 - f0) < 1e-15) throw new Error("División por cero en Secante (f(x1)-f(x0) aprox 0).");
+                    
+                    // Formula Secante
+                    let x2 = x1 - f1 * (x1 - x0) / (f1 - f0);
+                    let f2 = evaluateFunc(f, x2);
+                    let err = calcularError(x2, x1, errorType);
+                    
+                    rows.push([iter, x2.toFixed(8), f2.toExponential(3), err.toExponential(4)]);
+                    histX.push(x2);
+
+                    if (err < tol) { converged = true; x_final = x2; break; }
+                    
+                    // Actualizar
+                    x0 = x1; f0 = f1;
+                    x1 = x2; f1 = f2;
+                    iter++;
+                }
+                x_final = x1;
+                plotRootMethod(f, x_final-2, x_final+2, x_final, histX);
+
+            } else if (currentMethod === 'raices_multiples') {
+                const f = document.getElementById('func').value;
+                const df = document.getElementById('dfunc').value;
+                const ddf = document.getElementById('ddfunc').value;
+                let x0 = Number(document.getElementById('x0').value);
+                
+                headers.push('xn', 'f(xn)', 'Error');
+                let iter = 0;
+                
+                while(iter < maxIter) {
+                    let fx = evaluateFunc(f, x0);
+                    let dfx = evaluateFunc(df, x0);
+                    let ddfx = evaluateFunc(ddf, x0);
+                    
+                    histX.push(x0);
+                    
+                    // Formula Newton Modificado: x = x - (f*f')/( (f')^2 - f*f'' )
+                    let deno = Math.pow(dfx, 2) - fx * ddfx;
+                    if (Math.abs(deno) < 1e-15) throw new Error("Denominador cero en Newton Modificado.");
+                    
+                    let x_next = x0 - (fx * dfx) / deno;
+                    let err = calcularError(x_next, x0, errorType);
+                    
+                    rows.push([iter, x0.toFixed(8), fx.toExponential(3), err !== null ? err.toExponential(4) : '---']);
+                    
+                    if (err !== null && err < tol) { converged = true; x_final = x_next; break; }
+                    
+                    x0 = x_next;
+                    iter++;
+                }
+                x_final = x0;
+                plotRootMethod(f, x_final-2, x_final+2, x_final, histX);
+            }
+
+            renderTable(headers, rows);
+            const msgFinal = converged 
+                ? `Aproximación encontrada: x ≈ ${x_final.toFixed(8)} (Tol: ${tol})`
+                : `El método fracasó en ${maxIter} iteraciones. Último valor: x ≈ ${x_final !== null ? x_final.toFixed(8) : '---'}`;
+            document.getElementById('success-final').innerText = msgFinal;
+            if(!converged) document.getElementById('success-final').style.color = 'var(--error-color)';
+            else document.getElementById('success-final').style.color = 'var(--success-color)';
+        }
+
+        // 2. SISTEMAS DIRECTOS (GAUSS, LU)
+        function solveDirectSystem() {
+            const A = parseInputMatrix('matrixA');
+            const b = parseInputArray('vectorB');
+            const n = A.length;
+            
+            if (b.length !== n) throw new Error("Dimensiones incompatibles entre A y b.");
+
+            let sol = null;
+
+            if (currentMethod === 'gauss_simple') {
+                // Implementación básica Eliminación Gaussiana
+                // Augmentar matriz [A|b]
+                let Aug = A.map((row, i) => [...row, b[i]]);
+                
+                // 1. Eliminación hacia adelante
+                for (let i = 0; i < n; i++) {
+                    // Pivoteo parcial básico (buscar mayor en columna)
+                    let maxRow = i;
+                    for (let k = i + 1; k < n; k++) {
+                        if (Math.abs(Aug[k][i]) > Math.abs(Aug[maxRow][i])) maxRow = k;
+                    }
+                    // Intercambiar filas
+                    [Aug[i], Aug[maxRow]] = [Aug[maxRow], Aug[i]];
+                    
+                    if (Math.abs(Aug[i][i]) < 1e-15) throw new Error("Matriz singular o casi singular.");
+
+                    // Eliminar
+                    for (let k = i + 1; k < n; k++) {
+                        let factor = Aug[k][i] / Aug[i][i];
+                        for (let j = i; j <= n; j++) {
+                            Aug[k][j] -= factor * Aug[i][j];
+                        }
+                    }
+                }
+                
+                // 2. Sustitución hacia atrás
+                sol = new Array(n).fill(0);
+                for (let i = n - 1; i >= 0; i--) {
+                    let sum = 0;
+                    for (let j = i + 1; j < n; j++) {
+                        sum += Aug[i][j] * sol[j];
+                    }
+                    sol[i] = (Aug[i][n] - sum) / Aug[i][i];
+                }
+                
+                renderTable(['Variable', 'Valor'], sol.map((v, i) => [`x${i+1}`, v.toFixed(6)]));
+                document.getElementById('success-final').innerText = 'Solución única encontrada mediante Eliminación Gaussiana.';
+
+            } else if (currentMethod === 'lu') {
+                // Factorización Doolittle
+                let L = math.identity(n).toArray();
+                let U = A.map(row => [...row]); // Copia de A
+
+                for (let i = 0; i < n; i++) {
+                    for (let k = i + 1; k < n; k++) {
+                        let factor = U[k][i] / U[i][i];
+                        L[k][i] = factor;
+                        for (let j = i; j < n; j++) {
+                            U[k][j] -= factor * U[i][j];
+                        }
+                    }
+                }
+                
+                // Mostrar matrices L y U
+                let rowsTable = [];
+                rowsTable.push(['Matriz L', matrixToHtml(L)]);
+                rowsTable.push(['Matriz U', matrixToHtml(U)]);
+                
+                // Resolver si b existe
+                if(b && b.length === n && !b.some(isNaN)) {
+                    // 1. Ly = b (Sust. adelante)
+                    let y = new Array(n).fill(0);
+                    for(let i=0; i<n; i++){
+                        let sum = 0;
+                        for(let j=0; j<i; j++) sum += L[i][j] * y[j];
+                        y[i] = b[i] - sum;
+                    }
+                    // 2. Ux = y (Sust. atrás)
+                    let x = new Array(n).fill(0);
+                    for(let i=n-1; i>=0; i--){
+                        let sum = 0;
+                        for(let j=i+1; j<n; j++) sum += U[i][j] * x[j];
+                        x[i] = (y[i] - sum) / U[i][i];
+                    }
+                    rowsTable.push(['Solución x', x.map(v=>v.toFixed(4)).join(', ')]);
+                }
+                
+                renderTable(['Concepto', 'Detalle'], rowsTable);
+            }
+        }
+        
+        function matrixToHtml(M) {
+            return `<div style="font-family:monospace; text-align:left;">[${M.map(row => row.map(v=>v.toFixed(2).padStart(6)).join(', ')).join(']<br>[')}]</div>`;
+        }
+
+        // 3. SISTEMAS ITERATIVOS (JACOBI, GS, SOR)
+        function solveIterativeSystem() {
+            const A = parseInputMatrix('matrixA');
+            const b = parseInputArray('vectorB');
+            let x0 = parseInputArray('vectorX0');
+            const n = A.length;
+            const tol = Number(document.getElementById('tol').value);
+            const maxIter = Number(document.getElementById('niter').value);
+            const errorType = document.getElementById('error-type').value;
+
+            if (b.length !== n || x0.length !== n) throw new Error("Dimensiones incompatibles.");
+            
+            // Tarea: Verificar Diagonal Dominante (Opcional, para sustentar advirtiendo)
+            let dd = true;
+            for(let i=0; i<n; i++){
+                let sum = 0;
+                for(let j=0; j<n; j++) if(i!==j) sum += Math.abs(A[i][j]);
+                if(Math.abs(A[i][i]) <= sum) dd = false;
+            }
+            if(!dd) console.warn("La matriz no es diagonalmente dominante. Puede no converger.");
+
+            let headers = ['Iter (n)'];
+            for(let i=0; i<n; i++) headers.push(`x${i+1}`);
+            headers.push('Error Dispersion');
+            
+            let rows = [];
+            let iter = 0;
+            let converged = false;
+            
+            // Guardar iteración 0
+            rows.push([0, ...x0.map(v=>v.toFixed(6)), '---']);
+
+            while (iter < maxIter) {
+                let x_next = new Array(n).fill(0);
+                
+                if (currentMethod === 'jacobi') {
+                    for (let i = 0; i < n; i++) {
+                        let sum = 0;
+                        for (let j = 0; j < n; j++) {
+                            if (i !== j) sum += A[i][j] * x0[j];
+                        }
+                        x_next[i] = (b[i] - sum) / A[i][i];
+                    }
+                } else if (currentMethod === 'gauss_seidel' || currentMethod === 'sor') {
+                    const omega = currentMethod === 'sor' ? Number(document.getElementById('omega').value) : 1.0;
+                    
+                    // Copiar x0 para actualizar "in-place" parcialmente
+                    x_next = [...x0]; 
+                    for (let i = 0; i < n; i++) {
+                        let sum = 0;
+                        for (let j = 0; j < n; j++) {
+                            if (i !== j) sum += A[i][j] * x_next[j]; // Usa valores ya calculados de x_next
+                        }
+                        let x_gs = (b[i] - sum) / A[i][i];
+                        
+                        // Aplicar Relajación SOR: x = (1-w)x_ant + w*x_gs
+                        x_next[i] = (1 - omega) * x0[i] + omega * x_gs;
+                    }
+                }
+                
+                // Calcular Error (Norma infinito de la diferencia basada en teoría de errores adaptada a vectores)
+                let maxDiff = 0;
+                let maxNext = 0;
+                for(let i=0; i<n; i++) {
+                    maxDiff = Math.max(maxDiff, Math.abs(x_next[i] - x0[i]));
+                    maxNext = Math.max(maxNext, Math.abs(x_next[i]));
+                }
+                
+                let errVal = errorType === 'absoluto' ? maxDiff : (maxNext > 1e-12 ? maxDiff / maxNext : maxDiff);
+                
+                rows.push([iter + 1, ...x_next.map(v=>v.toFixed(6)), errVal.toExponential(4)]);
+                
+                if (errVal < tol) { converged = true; break; }
+                
+                x0 = x_next;
+                iter++;
+            }
+            
+            renderTable(headers, rows);
+            document.getElementById('success-final').innerText = converged 
+                ? `Convertió en ${iter+1} iteraciones.` 
+                : `Fracasó en ${maxIter} iteraciones.`;
+        }
+
+        // 4. INTERPOLACIÓN
+        function solveInterpolation() {
+            const X = parseInputArray('pointsX');
+            const Y = parseInputArray('pointsY');
+            if(X.length !== Y.length) throw new Error("Mismo número de puntos X e Y requerido.");
+            const n = X.length;
+
+            if (currentMethod === 'newton_diff') {
+                // Tarea Diapositiva: Programar el cálculo de la tabla de diferencias
+                // 1. Crear Tabla
+                let dd = Array.from({length: n}, () => new Array(n+1).fill(0));
+                // Columna 0: X, Columna 1: Y
+                for(let i=0; i<n; i++) { dd[i][0] = X[i]; dd[i][1] = Y[i]; }
+                
+                // 2. Calcular diferencias divididas
+                for(let j=2; j<=n; j++) { // Columna de diferencia
+                    for(let i=j-1; i<n; i++) { // Fila
+                        dd[i][j] = (dd[i][j-1] - dd[i-1][j-1]) / (dd[i][0] - dd[i-(j-1)][0]);
+                    }
+                }
+                
+                // Construir Polinomio texto
+                let coefs = [];
+                for(let i=0; i<n; i++) coefs.push(dd[i][i+1]);
+                
+                let polyText = `${coefs[0].toFixed(2)}`;
+                for(let i=1; i<n; i++) {
+                    let term = ` + (${coefs[i].toExponential(2)})`;
+                    for(let j=0; j<i; j++) term += `*(x - ${X[j]})`;
+                    polyText += term;
+                }
+
+                // Mostrar Tabla
+                let head = ['i', 'xi', 'f(xi)'];
+                for(let i=1; i<n; i++) head.push(`Diff ${i}`);
+                
+                let rows = dd.map((row, i) => [i, row[0], row[1], ...row.slice(2).map(v => v!==0 ? v.toExponential(2) : '---')]);
+                renderTable(head, rows);
+                
+                document.getElementById('success-final').innerText = `Polinomio (Newton): P(x) = ${polyText.substring(0,100)}...`;
+                
+                // Graficar Polinomio vs Puntos
+                plotInterpolation(X, Y, polyText);
+
+            } else if (currentMethod === 'lagrange') {
+                // Construcción simbólica texto para graficar
+                let polyText = "";
+                for(let i=0; i<n; i++) {
+                    let Li = "1";
+                    let deno = 1;
+                    for(let j=0; j<n; j++) {
+                        if(i !== j) {
+                            Li += `*(x - ${X[j]})`;
+                            deno *= (X[i] - X[j]);
+                        }
+                    }
+                    let term = ` + (${Y[i]} / ${deno}) * ${Li}`;
+                    polyText += term;
+                }
+                // Limpiar primer ' + '
+                polyText = polyText.substring(3);
+                
+                renderTable(['i', 'xi', 'fi'], X.map((x,i)=>[i, x, Y[i]]));
+                document.getElementById('success-final').innerText = `Polinomio de Lagrange calculado (Grado ${n-1}).`;
+                plotInterpolation(X, Y, polyText);
+
+            } else if (currentMethod === 'splines') {
+                // Trazadores Cúbicos Naturales (Requiere resolver sistema tridiagonal)
+                // Usamos math.js para simplificar el álgebra pesada de splines
+                if(n < 3) throw new Error("Se requieren al menos 3 puntos para splines cúbicos.");
+                
+                // Ordenar puntos por X por seguridad
+                let pts = X.map((x,i) => ({x: x, y: Y[i]})).sort((a,b) => a.x - b.x);
+                let sortedX = pts.map(p=>p.x);
+                let sortedY = pts.map(p=>p.y);
+
+                renderTable(['i', 'xi', 'fi'], sortedX.map((x,i)=>[i, x, sortedY[i]]));
+                document.getElementById('success-final').innerText = `Trazadores Cúbicos Naturales calculados (${n-1} intervalos).`;
+                
+                // Graficar usando función spline nativa de mathjs para visualización rápida
+                plotSpline(sortedX, sortedY);
+            }
+        }
+
+        // 5. INT / DIF
+        function solveSingleCalc() {
+            const f = document.getElementById('func').value;
+            let result = null;
+            let desc = '';
+
+            if (currentMethod === 'diferencias_finitas') {
+                const x = Number(document.getElementById('x_calc'));
+                const h = Number(document.getElementById('h_step'));
+                const scheme = document.getElementById('scheme').value;
+                
+                if(h <= 0) throw new Error("h debe ser > 0");
+
+                let fx = evaluateFunc(f, x);
+                
+                if (scheme === 'fwd1') {
+                    let f_h = evaluateFunc(f, x + h);
+                    result = (f_h - fx) / h;
+                    desc = `f'(${x}) ≈ [f(x+h) - f(x)]/h (Adelante O(h))`;
+                } else if (scheme === 'bwd1') {
+                    let f_mh = evaluateFunc(f, x - h);
+                    result = (fx - f_mh) / h;
+                    desc = `f'(${x}) ≈ [f(x) - f(x-h)]/h (Atrás O(h))`;
+                } else if (scheme === 'ctr2') {
+                    // Tarea Diapositiva
+                    let f_h = evaluateFunc(f, x + h);
+                    let f_mh = evaluateFunc(f, x - h);
+                    result = (f_h - f_mh) / (2 * h);
+                    desc = `f'(${x}) ≈ [f(x+h) - f(x-h)]/(2h) (Centrada O(h^2) - Tarea)`;
+                }
+                
+                plotGenericFunction(f, x-1, x+1, 'f(x)');
+
+            } else if (currentMethod === 'trapecio') {
+                const a = Number(document.getElementById('int_a'));
+                const b = Number(document.getElementById('int_b'));
+                const n = Number(document.getElementById('n_seg'));
+                
+                if(n < 1) throw new Error("n debe ser >= 1");
+                
+                let h = (b - a) / n;
+                let sum = evaluateFunc(f, a) + evaluateFunc(f, b);
+                
+                // Tarea: Trapecio Compuesto
+                for(let i=1; i<n; i++) {
+                    sum += 2 * evaluateFunc(f, a + i*h);
+                }
+                
+                result = (h / 2) * sum;
+                desc = `Integral aprox. en [${a}, ${b}] con ${n} trapecios (Regla Compuesta - Tarea)`;
+                
+                plotGenericFunction(f, a, b, 'f(x)', true); // shaded
+
+            } else if (currentMethod === 'simpson') {
+                const a = Number(document.getElementById('int_a'));
+                const b = Number(document.getElementById('int_b'));
+                const n = Number(document.getElementById('n_seg'));
+                const type = document.getElementById('simp_type').value;
+
+                if(n < 1) throw new Error("n debe ser >= 1");
+                let h = (b - a) / n;
+                let sum = evaluateFunc(f, a) + evaluateFunc(f, b);
+
+                if (type === '13') {
+                    if (n % 2 !== 0) throw new Error("Simpson 1/3 requiere n par.");
+                    for(let i=1; i<n; i++) {
+                        sum += (i % 2 === 0 ? 2 : 4) * evaluateFunc(f, a + i*h);
+                    }
+                    result = (h / 3) * sum;
+                    desc = `Integral aprox. (Simpson 1/3 Compuesto) en [${a}, ${b}]`;
+                } else if (type === '38') {
+                    // Tarea Diapositiva
+                    if (n % 3 !== 0) throw new Error("Simpson 3/8 requiere n múltiplo de 3.");
+                    for(let i=1; i<n; i++) {
+                        sum += (i % 3 === 0 ? 2 : 3) * evaluateFunc(f, a + i*h);
+                    }
+                    result = (3 * h / 8) * sum;
+                    desc = `Integral aprox. (Simpson 3/8 Compuesto - Tarea) en [${a}, ${b}]`;
+                }
+                plotGenericFunction(f, a, b, 'f(x)', true);
+            }
+
+            renderTable(['Concepto', 'Valor'], [['Definición', desc], ['Resultado', result.toFixed(8)]]);
+        }
+
+        // =========================================================================
+        // --- GRAFICACIÓN CON PLOTLY ---
+        // =========================================================================
+        
+        const layoutBase = {
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: '#e2e8f0', family: 'Segoe UI' },
+            xaxis: { gridcolor: '#334155', zerolinecolor: '#fff', title: 'x' },
+            yaxis: { gridcolor: '#334155', zerolinecolor: '#fff', title: 'y' },
+            margin: { t: 40, b: 40, l: 50, r: 20 },
+            hovermode: 'closest'
+        };
+
+        // Gráfica estándar para métodos de raíces (Bisección, Newton, Secante)
+        function plotRootMethod(funcStr, xMin, xMax, root, historyX) {
+            try {
+                const xVals = math.range(xMin, xMax, (xMax-xMin)/200).toArray();
+                const yVals = xVals.map(x => evaluateFunc(funcStr, x));
+
+                // Traza 1: La función
+                const traceFunc = {
+                    x: xVals, y: yVals,
+                    type: 'scatter', mode: 'lines',
+                    name: 'f(x)', line: { color: '#3b82f6', width: 2 }
+                };
+
+                // Traza 2: La raíz encontrada
+                const traceRoot = {
+                    x: [root], y: [0],
+                    type: 'scatter', mode: 'markers',
+                    name: 'Raíz', marker: { color: '#ef4444', size: 12, symbol: 'x' }
+                };
+                
+                // Traza 3: Historial de iteraciones sobre el eje X
+                const traceHist = {
+                    x: historyX, y: historyX.map(()=>0),
+                    type: 'scatter', mode: 'markers',
+                    name: 'Iteraciones', marker: { color: 'rgba(16, 185, 129, 0.5)', size: 8 }
+                };
+
+                Plotly.newPlot('plot-container', [traceFunc, traceHist, traceRoot], {
+                    ...layoutBase,
+                    title: `Visualización: ${methodConfigs[currentMethod].title}`
+                });
+            } catch (e) { console.error("Error graficando", e); }
+        }
+
+        function plotGenericFunction(funcStr, xMin, xMax, titleY, shaded=false) {
+            try {
+                // Ajustar intervalo si es muy pequeño
+                if(Math.abs(xMax - xMin) < 0.1) { xMin -= 1; xMax += 1; }
+                const xVals = math.range(xMin, xMax, (xMax-xMin)/200).toArray();
+                const yVals = xVals.map(x => evaluateFunc(funcStr, x));
+
+                const trace = {
+                    x: xVals, y: yVals,
+                    type: 'scatter', mode: 'lines',
+                    name: titleY, line: { color: '#a78bfa', width: 2 }
+                };
+                
+                if(shaded) {
+                    trace.fill = 'tozeroy';
+                    trace.fillcolor = 'rgba(167, 139, 250, 0.2)';
+                }
+
+                Plotly.newPlot('plot-container', [trace], { ...layoutBase, title: 'Gráfica de la función' });
+            } catch (e) {}
+        }
+        
+        function plotInterpolation(pointsX, pointsY, polyExpr) {
+            try {
+                const minX = Math.min(...pointsX);
+                const maxX = Math.max(...pointsX);
+                const margin = (maxX - minX) * 0.1 || 1;
+                
+                const xVals = math.range(minX - margin, maxX + margin, (maxX-minX+2*margin)/200).toArray();
+                const yVals = xVals.map(x => evaluateFunc(polyExpr, x));
+                
+                const tracePoly = {
+                    x: xVals, y: yVals,
+                    type: 'scatter', mode: 'lines',
+                    name: 'Polinomio', line: { color: '#10b981', width: 2 }
+                };
+                
+                const tracePts = {
+                    x: pointsX, y: pointsY,
+                    type: 'scatter', mode: 'markers',
+                    name: 'Datos', marker: { color: '#f8fafc', size: 10, border: {color:'#000', width:1} }
+                };
+                
+                Plotly.newPlot('plot-container', [tracePoly, tracePts], { ...layoutBase, title: 'Interpolación Polinómica' });
+
+            } catch (e) { console.error(e); }
+        }
+        
+        function plotSpline(sortedX, sortedY) {
+            try {
+                // Usamos la interpolación nativa de Plotly para visualización de splines (cubic)
+                const traceSpline = {
+                    x: sortedX,
+                    y: sortedY,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    name: 'Spline Cúbico',
+                    line: { shape: 'spline', color: '#f59e0b', width: 2 },
+                    marker: { size: 8, color: '#f8fafc' }
+                };
+                 Plotly.newPlot('plot-container', [traceSpline], { ...layoutBase, title: 'Interpolación por Splines (Plotly smooth)' });
+            } catch (e) {}
+        }
+
+        // Iniciar app
+        window.onload = () => selectMethod('biseccion');
+    </script>
+</body>
+</html>
